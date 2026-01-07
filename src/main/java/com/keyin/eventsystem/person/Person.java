@@ -1,4 +1,4 @@
-package com.keyin.eventsystem;
+package com.keyin.eventsystem.person;
 
 public class Person {
 
