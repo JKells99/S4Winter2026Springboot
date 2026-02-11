@@ -1,4 +1,4 @@
-package com.keyin.javareview;
+package com.keyin.javareview.testclasses;
 
 public class AnimalDAO {
 
