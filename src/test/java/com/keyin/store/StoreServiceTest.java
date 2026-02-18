@@ -5,6 +5,7 @@ import com.keyin.city.CityRestRepository;
 import com.keyin.employee.Employee;
 import com.keyin.employee.EmployeeRestRepository;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -31,41 +32,49 @@ public class StoreServiceTest {
     @InjectMocks
     private StoreService storeService;
 
+    private Store store;
+    private City city;
+    private Employee employee;
+
+    @BeforeEach
+    public void setup() {
+        city = new City("St. John's");
+        city.setCityId(1L);
+
+        store = new Store("Music Store 1", "123 Main St", city);
+        store.setStoreId(1L);
+
+        employee = new Employee("John", "Doe", "Manager");
+        employee.setEmployeeId(1L);
+    }
+
     @Test
     public void testGetAllStores() {
-        Store store1 = new Store("Music Store 1", "123 Main St", new City("St. John's"));
         Store store2 = new Store("Music Store 2", "456 Water St", new City("Mount Pearl"));
-        List<Store> storeList = new ArrayList<>();
-        storeList.add(store1);
-        storeList.add(store2);
+        List<Store> storeList = List.of(store, store2);
 
         Mockito.when(storeRestRepository.findAll()).thenReturn(storeList);
 
         Iterable<Store> returnedStores = storeService.getAllStores();
 
-        Assertions.assertTrue(returnedStores.iterator().hasNext());
-        int count = 0;
-        for (Store s : returnedStores) {
-            count++;
-        }
-        Assertions.assertEquals(2, count);
+        List<Store> resultList = new ArrayList<>();
+        returnedStores.forEach(resultList::add);
+
+        Assertions.assertEquals(2, resultList.size());
+        Assertions.assertTrue(resultList.contains(store));
     }
 
     @Test
     public void testCreateStore_CityExists() {
-        City existingCity = new City("St. John's");
-        existingCity.setCityId(1L);
-        Store newStore = new Store("New Store", "789 Broadway", new City("St. John's"));
+        Mockito.when(cityRestRepository.findCityByCityName(city.getCityName())).thenReturn(Optional.of(city));
+        Mockito.when(storeRestRepository.findStoreByStoreNameAndCity(store.getStoreName(), city)).thenReturn(Optional.empty());
+        Mockito.when(storeRestRepository.save(store)).thenReturn(store);
 
-        Mockito.when(cityRestRepository.findCityByCityName("St. John's")).thenReturn(Optional.of(existingCity));
-        Mockito.when(storeRestRepository.findStoreByStoreNameAndCity("New Store", existingCity)).thenReturn(Optional.empty());
-        Mockito.when(storeRestRepository.save(newStore)).thenReturn(newStore);
-
-        Store createdStore = storeService.createStore(newStore);
+        Store createdStore = storeService.createStore(store);
 
         Assertions.assertNotNull(createdStore);
-        Assertions.assertEquals(existingCity, createdStore.getCity());
-        Mockito.verify(storeRestRepository, Mockito.times(1)).save(newStore);
+        Assertions.assertEquals(city, createdStore.getCity());
+        Mockito.verify(storeRestRepository).save(store);
     }
 
     @Test
@@ -81,17 +90,12 @@ public class StoreServiceTest {
         Store createdStore = storeService.createStore(newStore);
 
         Assertions.assertNotNull(createdStore);
-        Mockito.verify(cityRestRepository, Mockito.times(1)).save(newCity);
-        Mockito.verify(storeRestRepository, Mockito.times(1)).save(newStore);
+        Mockito.verify(cityRestRepository).save(newCity);
+        Mockito.verify(storeRestRepository).save(newStore);
     }
 
     @Test
     public void testAddEmployeeToStore() {
-        Store store = new Store("Test Store", "Address", new City("City"));
-        store.setStoreId(1L);
-        Employee employee = new Employee("John", "Doe", "Manager");
-        employee.setEmployeeId(1L);
-
         Mockito.when(storeRestRepository.findById(1L)).thenReturn(Optional.of(store));
         Mockito.when(employeeRestRepository.findById(1L)).thenReturn(Optional.of(employee));
         Mockito.when(storeRestRepository.save(store)).thenReturn(store);
